@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Modifier {{ object.raison_sociale }}{% else %}Nouvelle entreprise{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>{% if object %}Modifier {{ object.raison_sociale }}{% else %}Nouvelle entreprise{% endif %}</h1>
+  {% url 'entreprises:liste' as annuler %}
+  {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}
+</div>
+{% endblock %}

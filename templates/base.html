@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TransConnect{% endblock %} · TransConnect</title>
+  <style>
+    :root { --brand:#a51c30; --brand-dark:#7a1424; --bg:#f6f6f8; --card:#fff; --text:#222; --muted:#666; --line:#e2e2e6; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+    header { background:var(--brand-dark); color:#fff; }
+    nav { max-width:1100px; margin:0 auto; padding:0 16px; display:flex; flex-wrap:wrap; align-items:center; gap:4px 18px; min-height:56px; }
+    nav .logo { font-weight:700; font-size:1.15rem; color:#fff; text-decoration:none; margin-right:12px; }
+    nav a { color:#f3dfe2; text-decoration:none; padding:4px 0; border-bottom:2px solid transparent; }
+    nav a:hover, nav a.actif { color:#fff; border-bottom-color:#fff; }
+    nav .admin { margin-left:auto; }
+    main { max-width:1100px; margin:24px auto; padding:0 16px; }
+    h1, h2 { margin-top:0; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:20px; }
+    .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
+    .stat { font-size:2rem; font-weight:700; color:var(--brand); }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { background:#fafafa; font-size:.85rem; text-transform:uppercase; color:var(--muted); }
+    .table-wrap { overflow-x:auto; }
+    a { color:var(--brand); }
+    .muted { color:var(--muted); font-size:.9rem; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:4px; color:#fff; font-size:.8rem; white-space:nowrap; }
+    .b-publiee{background:#337AB7} .b-attribuee{background:#F0AD4E} .b-en_cours{background:#5BC0DE}
+    .b-livree{background:#5CB85C} .b-annulee{background:#777}
+    .b-proposee{background:#F0AD4E} .b-acceptee{background:#5CB85C} .b-refusee{background:#D9534F} .b-retiree{background:#777}
+    .b-oui{background:#5CB85C} .b-non{background:#D9534F}
+    .btn { display:inline-block; padding:7px 14px; border-radius:6px; border:1px solid var(--brand); background:var(--brand); color:#fff; text-decoration:none; cursor:pointer; font-size:.9rem; }
+    .btn.secondaire { background:#fff; color:var(--brand); }
+    .btn.danger { background:#D9534F; border-color:#D9534F; }
+    .btn.petit { padding:3px 10px; font-size:.8rem; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0; }
+    .inline { display:inline; }
+    .messages { list-style:none; padding:0; margin:0 0 16px; }
+    .messages li { padding:10px 14px; border-radius:6px; margin-bottom:8px; }
+    .messages .success { background:#e6f4ea; color:#1e6b34; } .messages .error { background:#fdecea; color:#a12622; }
+    .messages .warning { background:#fff4e5; color:#8a5300; } .messages .info { background:#e8f1fb; color:#1d4f86; }
+    .filtres a { margin-right:10px; } .filtres a.actif { font-weight:700; text-decoration:none; color:var(--text); }
+    dl.fiche { display:grid; grid-template-columns:max-content 1fr; gap:6px 18px; margin:0; }
+    dl.fiche dt { color:var(--muted); } dl.fiche dd { margin:0; }
+    form p { margin:0 0 14px; } form label { display:block; font-weight:600; margin-bottom:4px; }
+    form input:not([type=checkbox]), form select, form textarea { width:100%; max-width:480px; padding:8px; border:1px solid #ccc; border-radius:6px; font:inherit; }
+    .errorlist { color:#a12622; margin:4px 0; padding-left:18px; }
+    .helptext { color:var(--muted); font-size:.85rem; }
+    .pagination { margin-top:12px; }
+    footer { text-align:center; color:var(--muted); font-size:.85rem; padding:24px 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    {% with nom_url=request.resolver_match.app_name %}
+    <nav>
+      <a class="logo" href="{% url 'accueil' %}">🚚 TransConnect</a>
+      <a href="{% url 'expeditions:liste' %}" {% if nom_url == 'expeditions' %}class="actif"{% endif %}>Expéditions</a>
+      <a href="{% url 'offres:liste' %}" {% if nom_url == 'offres' %}class="actif"{% endif %}>Offres</a>
+      <a href="{% url 'vehicules:liste' %}" {% if nom_url == 'vehicules' %}class="actif"{% endif %}>Véhicules</a>
+      <a href="{% url 'entreprises:liste' %}" {% if nom_url == 'entreprises' %}class="actif"{% endif %}>Entreprises</a>
+      <a class="admin" href="{% url 'admin:index' %}">Admin</a>
+    </nav>
+    {% endwith %}
+  </header>
+
+  <main>
+    {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>TransConnect — plateforme chargeurs / transporteurs · {% now "Y" %}</footer>
+</body>
+</html>

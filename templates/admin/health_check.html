@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Accueil</a> › Contrôle d'intégrité
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <p>Rapport généré le {{ genere_le|date:"d/m/Y à H:i" }} — {{ controles|length }} contrôles exécutés.</p>
+
+  {% for controle in controles %}
+  <div class="module" style="margin-bottom:24px;">
+    <h2>
+      {% if controle.lignes %}⚠️{% else %}✅{% endif %}
+      {{ controle.titre }} — {{ controle.lignes|length }} anomalie{{ controle.lignes|length|pluralize }}
+    </h2>
+    <p style="padding:8px 12px;margin:0;"><em>{{ controle.regle }}</em></p>
+    {% if controle.lignes %}
+    <table style="width:100%;">
+      <thead>
+        <tr>{% for col in controle.colonnes %}<th>{{ col }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for ligne in controle.lignes %}
+        <tr>{% for cell in ligne %}<td>{{ cell }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="padding:0 12px 12px;color:#5CB85C;">Aucune anomalie détectée.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

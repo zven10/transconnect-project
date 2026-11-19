@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Offre #{{ offre.pk }}{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'offres:liste' %}">← Toutes les offres</a></p>
+<h1>Offre #{{ offre.pk }} <span class="badge b-{{ offre.statut }}">{{ offre.get_statut_display }}</span></h1>
+
+<div class="card">
+  <dl class="fiche">
+    <dt>Expédition</dt><dd><a href="{% url 'expeditions:detail' offre.expedition.reference %}">{{ offre.expedition }}</a></dd>
+    <dt>Transporteur</dt><dd><a href="{% url 'entreprises:detail' offre.transporteur.pk %}">{{ offre.transporteur.raison_sociale }}</a></dd>
+    <dt>Véhicule</dt><dd><a href="{% url 'vehicules:detail' offre.vehicule.pk %}">{{ offre.vehicule }}</a></dd>
+    <dt>Prix</dt><dd>{{ offre.prix|floatformat:2 }} TND</dd>
+    <dt>Délai</dt><dd>{{ offre.delai_jours }} jour{{ offre.delai_jours|pluralize }}</dd>
+    <dt>Proposée le</dt><dd>{{ offre.date_proposition|date:"d/m/Y" }}</dd>
+    <dt>Dernière mise à jour</dt><dd>il y a {{ offre.updated_at|timesince }}</dd>
+  </dl>
+  <div class="actions">
+    {% if offre.statut == 'proposee' %}
+    <a class="btn secondaire" href="{% url 'offres:modifier' offre.pk %}">Modifier</a>
+    <form class="inline" method="post" action="{% url 'offres:retirer' offre.pk %}">
+      {% csrf_token %}<button class="btn secondaire" type="submit">Retirer l'offre</button>
+    </form>
+    {% endif %}
+    {% if offre.statut != 'acceptee' %}
+    <a class="btn danger" href="{% url 'offres:supprimer' offre.pk %}">Supprimer</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

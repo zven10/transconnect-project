@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Modifier {{ object.immatriculation }}{% else %}Nouveau véhicule{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>{% if object %}Modifier le véhicule {{ object.immatriculation }}{% else %}Ajouter un véhicule{% endif %}</h1>
+  {% url 'vehicules:liste' as annuler %}
+  {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{# Formulaire générique : {% include 'partials/form.html' with bouton='Enregistrer' annuler=url %} #}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <ul class="errorlist messages"><li class="error">{{ form.non_field_errors|join:" " }}</li></ul>
+  {% endif %}
+  {{ form.as_p }}
+  <div class="actions">
+    <button type="submit" class="btn">{{ bouton|default:"Enregistrer" }}</button>
+    {% if annuler %}<a class="btn secondaire" href="{{ annuler }}">Annuler</a>{% endif %}
+  </div>
+</form>

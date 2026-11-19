@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Expéditions disponibles{% endblock %}
+
+{% block content %}
+<h1>Expéditions ({% if page_obj %}{{ page_obj.paginator.count }}{% else %}{{ expeditions|length }}{% endif %})</h1>
+
+<p class="filtres">
+  Statut :
+  {% for code, libelle in statuts %}
+  <a href="?statut={{ code }}" {% if statut_courant == code %}class="actif"{% endif %}>{{ libelle }}</a>
+  {% endfor %}
+  <a href="?statut=toutes" {% if statut_courant == 'toutes' %}class="actif"{% endif %}>Toutes</a>
+</p>
+
+<div class="card">
+  <ul>
+    {% for expedition in expeditions %}
+    <li>
+      <a href="{% url 'expeditions:detail' expedition.reference %}">{{ expedition.reference }}</a>
+      — {{ expedition.ville_depart }} → {{ expedition.ville_arrivee }}
+      ({{ expedition.poids_kg|floatformat:0 }} kg,
+      souhaitée le {{ expedition.date_souhaitee|date:"d/m/Y" }})
+      <span class="badge b-{{ expedition.statut }}">{{ expedition.get_statut_display }}</span>
+      <br>
+      <small>{{ expedition.description|default:"Aucune description fournie."|truncatewords:15 }}</small>
+      <small class="muted">— {{ expedition.entreprise.raison_sociale|upper }}</small>
+    </li>
+    {% empty %}
+    <li>Aucune expédition disponible pour le moment.</li>
+    {% endfor %}
+  </ul>
+  {% include 'partials/pagination.html' %}
+</div>
+{% endblock %}

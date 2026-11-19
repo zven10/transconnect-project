@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Modifier {{ object.reference }}{% else %}Nouvelle expédition{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if object %}
+  <h1>Modifier l'expédition {{ object.reference }}</h1>
+  {% url 'expeditions:detail' object.reference as annuler %}
+  {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}
+  {% else %}
+  <h1>Publier une expédition</h1>
+  <p class="muted">Pour le compte de <strong>{{ entreprise.raison_sociale }}</strong> (chargeur).</p>
+  {% url 'expeditions:liste' as annuler %}
+  {% include 'partials/form.html' with bouton='Publier' annuler=annuler %}
+  {% endif %}
+</div>
+{% endblock %}

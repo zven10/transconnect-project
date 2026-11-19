@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Véhicule {{ vehicule.immatriculation }}{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'vehicules:liste' %}">← Tous les véhicules</a></p>
+<h1>{{ vehicule.immatriculation|upper }}
+  <span class="badge b-{{ vehicule.disponible|yesno:'oui,non' }}">{{ vehicule.disponible|yesno:"Disponible,Indisponible" }}</span>
+</h1>
+
+<div class="card">
+  <dl class="fiche">
+    <dt>Gabarit</dt><dd>{{ vehicule.get_type_vehicule_display }} <span class="muted">(max. indicatif {{ vehicule.capacite_max_type|floatformat:"0g" }} kg)</span></dd>
+    <dt>Capacité</dt><dd>{{ vehicule.capacite_kg|floatformat:"0g" }} kg</dd>
+    <dt>Transporteur</dt><dd><a href="{% url 'entreprises:detail' vehicule.entreprise.pk %}">{{ vehicule.entreprise.raison_sociale }}</a></dd>
+    <dt>Ajouté le</dt><dd>{{ vehicule.created_at|date:"d/m/Y" }}</dd>
+  </dl>
+  <div class="actions">
+    <a class="btn secondaire" href="{% url 'vehicules:modifier' vehicule.pk %}">Modifier</a>
+    <a class="btn danger" href="{% url 'vehicules:supprimer' vehicule.pk %}">Supprimer</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Offres utilisant ce véhicule</h2>
+  <ul>
+    {% for offre in offres %}
+    <li>
+      <a href="{% url 'offres:detail' offre.pk %}">Offre #{{ offre.pk }}</a> sur
+      <a href="{% url 'expeditions:detail' offre.expedition.reference %}">{{ offre.expedition.reference }}</a>
+      — <span class="badge b-{{ offre.statut }}">{{ offre.get_statut_display }}</span>
+    </li>
+    {% empty %}
+    <li>Ce véhicule n'a encore été proposé sur aucune offre.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

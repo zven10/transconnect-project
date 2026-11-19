@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Modifier l'offre #{{ object.pk }}{% else %}Proposer une offre{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if object %}
+  <h1>Modifier l'offre #{{ object.pk }}</h1>
+  <p class="muted">Expédition {{ object.expedition.reference }} — seules les conditions sont modifiables.</p>
+  {% url 'offres:detail' object.pk as annuler %}
+  {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}
+  {% else %}
+  <h2>Proposer une offre</h2>
+  <p class="muted">Pour le compte de <strong>{{ entreprise.raison_sociale }}</strong> (transporteur).</p>
+  {% if not form.fields.vehicule.queryset.exists %}
+  <ul class="messages"><li class="warning">Aucun véhicule disponible pour ce transporteur : ajoutez-en un avant de proposer une offre.</li></ul>
+  {% endif %}
+  {% url 'expeditions:liste' as annuler %}
+  {% include 'partials/form.html' with bouton="Envoyer l'offre" annuler=annuler %}
+  {% endif %}
+</div>
+{% endblock %}

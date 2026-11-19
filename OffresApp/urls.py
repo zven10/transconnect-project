@@ -1,0 +1,16 @@
+from django.urls import path
+
+from . import views
+
+app_name = 'offres'
+
+urlpatterns = [
+    path('', views.OffreListView.as_view(), name='liste'),
+    path('proposer/', views.proposer_offre, name='proposer'),
+    path('ajouter/<int:entreprise_id>/', views.OffreCreateView.as_view(), name='ajouter'),
+    path('<int:pk>/', views.OffreDetailView.as_view(), name='detail'),
+    path('<int:pk>/modifier/', views.OffreUpdateView.as_view(), name='modifier'),
+    path('<int:pk>/supprimer/', views.OffreDeleteView.as_view(), name='supprimer'),
+    path('<int:pk>/accepter/', views.accepter_offre, name='accepter'),
+    path('<int:pk>/retirer/', views.retirer_offre, name='retirer'),
+]

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Entreprises{% endblock %}
+
+{% block content %}
+<div class="actions">
+  <h1 style="margin:0;">Entreprises</h1>
+  <a class="btn" href="{% url 'entreprises:ajouter' %}">+ Nouvelle entreprise</a>
+</div>
+
+<p class="filtres">
+  <a href="?" {% if not type_courant %}class="actif"{% endif %}>Toutes</a>
+  {% for code, libelle in types %}
+  <a href="?type={{ code }}" {% if type_courant == code %}class="actif"{% endif %}>{{ libelle }}s</a>
+  {% endfor %}
+</p>
+
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Raison sociale</th><th>Type</th><th>Matricule fiscal</th><th>Véhicules</th><th>Expéditions</th></tr></thead>
+    <tbody>
+    {% for entreprise in entreprises %}
+      <tr>
+        <td><a href="{% url 'entreprises:detail' entreprise.pk %}">{{ entreprise.raison_sociale }}</a></td>
+        <td>{{ entreprise.get_type_entreprise_display }}</td>
+        <td><code>{{ entreprise.matricule_fiscal|upper }}</code></td>
+        <td>{% if entreprise.est_transporteur %}{{ entreprise.nb_vehicules }}{% else %}—{% endif %}</td>
+        <td>{% if entreprise.est_chargeur %}{{ entreprise.nb_expeditions }}{% else %}—{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">Aucune entreprise enregistrée.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% include 'partials/pagination.html' %}
+</div>
+{% endblock %}

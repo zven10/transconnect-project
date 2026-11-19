@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Accueil{% endblock %}
+{% block content %}
+<h1>Bienvenue sur TransConnect</h1>
+<p class="muted">La plateforme de mise en relation entre chargeurs et transporteurs.</p>
+
+<div class="grid">
+  <div class="card"><div class="stat">{{ stats.expeditions_publiees }}</div>expédition{{ stats.expeditions_publiees|pluralize }} publiée{{ stats.expeditions_publiees|pluralize }}</div>
+  <div class="card"><div class="stat">{{ stats.offres_proposees }}</div>offre{{ stats.offres_proposees|pluralize }} en attente</div>
+  <div class="card"><div class="stat">{{ stats.vehicules_disponibles }}</div>véhicule{{ stats.vehicules_disponibles|pluralize }} disponible{{ stats.vehicules_disponibles|pluralize }}</div>
+  <div class="card"><div class="stat">{{ stats.entreprises }}</div>entreprise{{ stats.entreprises|pluralize }}</div>
+</div>
+
+<div class="card">
+  <h2>Dernières expéditions publiées</h2>
+  <ul>
+    {% for expedition in dernieres_expeditions %}
+    <li>
+      <a href="{% url 'expeditions:detail' expedition.reference %}">{{ expedition.reference }}</a>
+      — {{ expedition.ville_depart|title }} → {{ expedition.ville_arrivee|title }}
+      <span class="muted">(publiée il y a {{ expedition.created_at|timesince }})</span>
+    </li>
+    {% empty %}
+    <li>Aucune expédition publiée pour le moment.</li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% if chargeurs %}
+<div class="card">
+  <h2>Publier une expédition</h2>
+  <p class="muted">Sans authentification, choisissez l'entreprise chargeur pour le compte de laquelle vous publiez :</p>
+  <div class="actions">
+    {% for chargeur in chargeurs %}
+    <a class="btn secondaire" href="{% url 'expeditions:ajouter' chargeur.pk %}">{{ chargeur.raison_sociale }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

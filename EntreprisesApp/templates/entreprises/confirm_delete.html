@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer {{ entreprise.raison_sociale }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Supprimer {{ entreprise.raison_sociale }} ?</h1>
+  <p>Ses véhicules, expéditions et offres seront également supprimés.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="actions">
+      <button type="submit" class="btn danger">Confirmer la suppression</button>
+      <a class="btn secondaire" href="{% url 'entreprises:detail' entreprise.pk %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

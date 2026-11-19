@@ -1,0 +1,7 @@
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}<a href="?{% if statut_courant %}statut={{ statut_courant|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">← Précédent</a>{% endif %}
+  <span class="muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="?{% if statut_courant %}statut={{ statut_courant|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Suivant →</a>{% endif %}
+</div>
+{% endif %}

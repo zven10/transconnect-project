@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}{{ entreprise.raison_sociale }}{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'entreprises:liste' %}">← Toutes les entreprises</a></p>
+<h1>{{ entreprise.raison_sociale }} <span class="muted">· {{ entreprise.get_type_entreprise_display }}</span></h1>
+
+<div class="card">
+  <dl class="fiche">
+    <dt>Matricule fiscal</dt><dd><code>{{ entreprise.matricule_fiscal|upper }}</code></dd>
+    <dt>Adresse</dt><dd>{{ entreprise.adresse|linebreaksbr }}</dd>
+    <dt>Compte gestionnaire</dt><dd>{{ entreprise.utilisateur|default_if_none:"Aucun compte associé" }}</dd>
+    <dt>Inscrite le</dt><dd>{{ entreprise.created_at|date:"d/m/Y" }}</dd>
+  </dl>
+  <div class="actions">
+    <a class="btn secondaire" href="{% url 'entreprises:modifier' entreprise.pk %}">Modifier</a>
+    <a class="btn danger" href="{% url 'entreprises:supprimer' entreprise.pk %}">Supprimer</a>
+    {% if entreprise.est_chargeur %}
+    <a class="btn" href="{% url 'expeditions:ajouter' entreprise.pk %}">+ Publier une expédition</a>
+    {% else %}
+    <a class="btn" href="{% url 'vehicules:ajouter' %}?entreprise={{ entreprise.pk }}">+ Ajouter un véhicule</a>
+    <a class="btn" href="{% url 'offres:ajouter' entreprise.pk %}">+ Proposer une offre</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if entreprise.est_transporteur %}
+<div class="card">
+  <h2>Flotte ({{ vehicules|length }})</h2>
+  <ul>
+    {% for v in vehicules %}
+    <li><a href="{% url 'vehicules:detail' v.pk %}">{{ v.immatriculation }}</a> — {{ v.get_type_vehicule_display }},
+      {{ v.capacite_kg }} kg — {{ v.disponible|yesno:"disponible,indisponible" }}</li>
+    {% empty %}
+    <li>Aucun véhicule : ce transporteur ne peut pas encore proposer d'offre.</li>
+    {% endfor %}
+  </ul>
+</div>
+<div class="card">
+  <h2>Offres déposées ({{ offres|length }})</h2>
+  <ul>
+    {% for o in offres %}
+    <li><a href="{% url 'offres:detail' o.pk %}">#{{ o.pk }}</a> sur {{ o.expedition.reference }} —
+      {{ o.prix|floatformat:2 }} TND — <span class="badge b-{{ o.statut }}">{{ o.get_statut_display }}</span></li>
+    {% empty %}
+    <li>Aucune offre déposée.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<div class="card">
+  <h2>Expéditions publiées ({{ expeditions|length }})</h2>
+  <ul>
+    {% for e in expeditions %}
+    <li><a href="{% url 'expeditions:detail' e.reference %}">{{ e.reference }}</a> —
+      {{ e.ville_depart }} → {{ e.ville_arrivee }} — <span class="badge b-{{ e.statut }}">{{ e.get_statut_display }}</span></li>
+    {% empty %}
+    <li>Aucune expédition publiée.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

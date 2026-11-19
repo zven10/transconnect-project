@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer {{ expedition.reference }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Supprimer l'expédition {{ expedition.reference }} ?</h1>
+  <p>{{ expedition.ville_depart }} → {{ expedition.ville_arrivee }} — {{ expedition.offres.count }} offre(s) associée(s) seront également supprimées.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="actions">
+      <button type="submit" class="btn danger">Confirmer la suppression</button>
+      <a class="btn secondaire" href="{% url 'expeditions:detail' expedition.reference %}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

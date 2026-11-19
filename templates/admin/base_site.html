@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  :root, html[data-theme="light"], html[data-theme="dark"] {
+    --primary: #a51c30;
+    --secondary: #7a1424;
+    --header-bg: #7a1424;
+    --breadcrumbs-bg: #a51c30;
+    --link-selected-fg: #a51c30;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">🚚 {{ site_header|default:_('Django administration') }}</a></div>
+{% endblock %}
+
+{% block userlinks %}
+<a href="{% url 'admin:health_check' %}">Contrôle d'intégrité</a> /
+<a href="{% url 'accueil' %}">Site public</a> /
+{{ block.super }}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

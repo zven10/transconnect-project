@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Véhicules{% endblock %}
+
+{% block content %}
+<div class="actions">
+  <h1 style="margin:0;">Flotte de véhicules</h1>
+  <a class="btn" href="{% url 'vehicules:ajouter' %}">+ Ajouter un véhicule</a>
+</div>
+
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Immatriculation</th><th>Gabarit</th><th>Capacité</th><th>Transporteur</th><th>Disponible</th></tr></thead>
+    <tbody>
+    {% for vehicule in vehicules %}
+      <tr>
+        <td><a href="{% url 'vehicules:detail' vehicule.pk %}">{{ vehicule.immatriculation|upper }}</a></td>
+        <td>{{ vehicule.get_type_vehicule_display }}</td>
+        <td>{{ vehicule.capacite_kg|floatformat:"0g" }} kg</td>
+        <td>{{ vehicule.entreprise.raison_sociale|truncatechars:30 }}</td>
+        <td><span class="badge b-{{ vehicule.disponible|yesno:'oui,non' }}">{{ vehicule.disponible|yesno:"Oui,Non" }}</span></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">Aucun véhicule enregistré.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% include 'partials/pagination.html' %}
+</div>
+{% endblock %}
