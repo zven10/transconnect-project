@@ -1,4 +1,7 @@
 from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,8 +10,31 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
-from .forms import EntrepriseForm
+from .forms import EntrepriseForm, InscriptionForm
+from .mixins import EntrepriseRequiseMixin, entreprise_de
 from .models import Entreprise
+
+
+# ===========================================================================
+# Atelier Authentification — inscription
+# ===========================================================================
+
+class InscriptionView(CreateView):
+    """Création d'un compte puis ouverture directe de la session (login())."""
+    form_class = InscriptionForm
+    template_name = 'registration/inscription.html'
+    success_url = reverse_lazy('entreprises:ajouter')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('accueil')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)  # crée l'utilisateur (self.object), mot de passe haché
+        login(self.request, self.object)     # enregistre son identifiant dans la session
+        messages.success(self.request, 'Compte créé. Dernière étape : enregistrez votre entreprise.')
+        return response
 
 
 # ===========================================================================
@@ -25,9 +51,11 @@ def detail_entreprise(request, pk):
     return render(request, 'entreprises/detail.html', {'entreprise': entreprise})
 
 
+@login_required
 @require_http_methods(['GET', 'POST'])
 def supprimer_entreprise(request, pk):
-    entreprise = get_object_or_404(Entreprise, pk=pk)
+    # Appartenance : seule l'entreprise de l'utilisateur connecté est trouvable (sinon 404)
+    entreprise = get_object_or_404(Entreprise, pk=pk, utilisateur=request.user)
     if request.method == 'POST':
         entreprise.delete()
         return redirect('entreprises:liste')
@@ -78,20 +106,35 @@ class EntrepriseDetailView(DetailView):
         return context
 
 
-class EntrepriseCreateView(CreateView):
+class MonEntrepriseMixin:
+    """Appartenance : un compte ne charge que sa propre entreprise (pk d'une autre → 404)."""
+
+    def get_queryset(self):
+        return Entreprise.objects.filter(utilisateur=self.request.user)
+
+
+class EntrepriseCreateView(LoginRequiredMixin, CreateView):
+    """Étape qui suit l'inscription : rattacher une entreprise (relation 1–1) au compte connecté."""
     model = Entreprise
     form_class = EntrepriseForm
     template_name = 'entreprises/form.html'
+    success_url = reverse_lazy('expeditions:liste')
+
+    def dispatch(self, request, *args, **kwargs):
+        entreprise = entreprise_de(request.user)
+        if entreprise is not None:
+            messages.info(request, 'Votre compte gère déjà une entreprise.')
+            return redirect('entreprises:detail', pk=entreprise.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        messages.success(self.request, 'Entreprise créée.')
+        # utilisateur : jamais choisi par le client
+        form.instance.utilisateur = self.request.user
+        messages.success(self.request, 'Entreprise enregistrée : votre compte est prêt.')
         return super().form_valid(form)
 
-    def get_success_url(self):
-        return reverse('entreprises:detail', kwargs={'pk': self.object.pk})
 
-
-class EntrepriseUpdateView(UpdateView):
+class EntrepriseUpdateView(EntrepriseRequiseMixin, MonEntrepriseMixin, UpdateView):
     model = Entreprise
     form_class = EntrepriseForm
     template_name = 'entreprises/form.html'
@@ -104,7 +147,7 @@ class EntrepriseUpdateView(UpdateView):
         return reverse('entreprises:detail', kwargs={'pk': self.object.pk})
 
 
-class EntrepriseDeleteView(DeleteView):
+class EntrepriseDeleteView(EntrepriseRequiseMixin, MonEntrepriseMixin, DeleteView):
     model = Entreprise
     template_name = 'entreprises/confirm_delete.html'
     context_object_name = 'entreprise'

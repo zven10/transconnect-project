@@ -15,6 +15,7 @@
     <dt>Proposée le</dt><dd>{{ offre.date_proposition|date:"d/m/Y" }}</dd>
     <dt>Dernière mise à jour</dt><dd>il y a {{ offre.updated_at|timesince }}</dd>
   </dl>
+  {% if user.is_authenticated and mon_entreprise.pk == offre.transporteur_id %}
   <div class="actions">
     {% if offre.statut == 'proposee' %}
     <a class="btn secondaire" href="{% url 'offres:modifier' offre.pk %}">Modifier</a>
@@ -26,5 +27,6 @@
     <a class="btn danger" href="{% url 'offres:supprimer' offre.pk %}">Supprimer</a>
     {% endif %}
   </div>
+  {% endif %}
 </div>
 {% endblock %}

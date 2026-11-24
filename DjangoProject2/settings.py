@@ -30,6 +30,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    # Placée avant l'admin : ses templates registration/* (connexion, changement de
+    # mot de passe) sont trouvés avant ceux de django.contrib.admin.
+    'EntreprisesApp',
     # Admin personnalisé (branding + /admin/health-check/)
     'DjangoProject2.apps.TransConnectAdminConfig',
     'django.contrib.auth',
@@ -38,8 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Applications métier TransConnect
-    'EntreprisesApp',
+    # Applications métier TransConnect (EntreprisesApp est déclarée en tête)
     'ExpeditionsApp',
     'OffresApp',
     'VehiculesApp',
@@ -47,6 +49,11 @@ INSTALLED_APPS = [
 
 # Modèle utilisateur personnalisé (hérite d'AbstractUser)
 AUTH_USER_MODEL = 'EntreprisesApp.Utilisateur'
+
+# Authentification : des noms de route, jamais d'URL codée en dur
+LOGIN_URL = 'login'                          # où envoyer un visiteur non connecté
+LOGIN_REDIRECT_URL = 'expeditions:liste'     # où aller après une connexion réussie
+LOGOUT_REDIRECT_URL = 'expeditions:liste'    # où aller après une déconnexion
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -70,6 +77,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # mon_entreprise : l'entreprise de l'utilisateur connecté (ou None)
+                'EntreprisesApp.context_processors.entreprise_courante',
             ],
         },
     },

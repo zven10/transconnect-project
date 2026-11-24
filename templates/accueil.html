@@ -26,15 +26,30 @@
   </ul>
 </div>
 
-{% if chargeurs %}
 <div class="card">
-  <h2>Publier une expédition</h2>
-  <p class="muted">Sans authentification, choisissez l'entreprise chargeur pour le compte de laquelle vous publiez :</p>
+  {% if not user.is_authenticated %}
+  <h2>Rejoindre TransConnect</h2>
+  <p class="muted">Créez un compte puis enregistrez votre entreprise (chargeur ou transporteur).</p>
   <div class="actions">
-    {% for chargeur in chargeurs %}
-    <a class="btn secondaire" href="{% url 'expeditions:ajouter' chargeur.pk %}">{{ chargeur.raison_sociale }}</a>
-    {% endfor %}
+    <a class="btn" href="{% url 'inscription' %}">Créer un compte</a>
+    <a class="btn secondaire" href="{% url 'login' %}">Se connecter</a>
   </div>
+  {% elif mon_entreprise.est_chargeur %}
+  <h2>{{ mon_entreprise.raison_sociale }}</h2>
+  <div class="actions">
+    <a class="btn" href="{% url 'expeditions:ajouter' %}">+ Publier une expédition</a>
+    <a class="btn secondaire" href="{% url 'entreprises:detail' mon_entreprise.pk %}">Mes expéditions</a>
+  </div>
+  {% elif mon_entreprise.est_transporteur %}
+  <h2>{{ mon_entreprise.raison_sociale }}</h2>
+  <div class="actions">
+    <a class="btn" href="{% url 'expeditions:liste' %}">Trouver une expédition</a>
+    <a class="btn secondaire" href="{% url 'vehicules:mes' %}">Mes véhicules</a>
+  </div>
+  {% else %}
+  <h2>Dernière étape</h2>
+  <p class="muted">Votre compte n'est rattaché à aucune entreprise.</p>
+  <a class="btn" href="{% url 'entreprises:ajouter' %}">Créer mon entreprise</a>
+  {% endif %}
 </div>
-{% endif %}
 {% endblock %}

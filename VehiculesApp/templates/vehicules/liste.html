@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
-{% block title %}Véhicules{% endblock %}
+{% block title %}{% if mes_vehicules %}Mes véhicules{% else %}Véhicules{% endif %}{% endblock %}
 
 {% block content %}
 <div class="actions">
-  <h1 style="margin:0;">Flotte de véhicules</h1>
+  <h1 style="margin:0;">{% if mes_vehicules %}Mes véhicules — {{ mon_entreprise.raison_sociale }}{% else %}Flotte de véhicules{% endif %}</h1>
+  {% if mon_entreprise.est_transporteur %}
   <a class="btn" href="{% url 'vehicules:ajouter' %}">+ Ajouter un véhicule</a>
+  {% endif %}
 </div>
 
 <div class="card table-wrap">

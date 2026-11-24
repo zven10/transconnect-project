@@ -12,16 +12,18 @@
     <dt>Compte gestionnaire</dt><dd>{{ entreprise.utilisateur|default_if_none:"Aucun compte associé" }}</dd>
     <dt>Inscrite le</dt><dd>{{ entreprise.created_at|date:"d/m/Y" }}</dd>
   </dl>
+  {% if user.is_authenticated and mon_entreprise.pk == entreprise.pk %}
   <div class="actions">
     <a class="btn secondaire" href="{% url 'entreprises:modifier' entreprise.pk %}">Modifier</a>
     <a class="btn danger" href="{% url 'entreprises:supprimer' entreprise.pk %}">Supprimer</a>
     {% if entreprise.est_chargeur %}
-    <a class="btn" href="{% url 'expeditions:ajouter' entreprise.pk %}">+ Publier une expédition</a>
+    <a class="btn" href="{% url 'expeditions:ajouter' %}">+ Publier une expédition</a>
     {% else %}
-    <a class="btn" href="{% url 'vehicules:ajouter' %}?entreprise={{ entreprise.pk }}">+ Ajouter un véhicule</a>
-    <a class="btn" href="{% url 'offres:ajouter' entreprise.pk %}">+ Proposer une offre</a>
+    <a class="btn" href="{% url 'vehicules:ajouter' %}">+ Ajouter un véhicule</a>
+    <a class="btn" href="{% url 'offres:ajouter' %}">+ Proposer une offre</a>
     {% endif %}
   </div>
+  {% endif %}
 </div>
 
 {% if entreprise.est_transporteur %}

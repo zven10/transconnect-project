@@ -1,12 +1,13 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
-from EntreprisesApp.models import Entreprise
+from EntreprisesApp.mixins import TransporteurRequisMixin
 from ExpeditionsApp.models import Expedition
 from VehiculesApp.models import Vehicule
 
@@ -30,9 +31,10 @@ def detail_offre(request, pk):
     return render(request, 'offres/detail.html', {'offre': offre})
 
 
+@login_required
 @require_http_methods(['GET', 'POST'])
 def supprimer_offre(request, pk):
-    offre = get_object_or_404(Offre, pk=pk)
+    offre = get_object_or_404(Offre, pk=pk, transporteur__utilisateur=request.user)
     if request.method == 'POST':
         offre.delete()
         return redirect('offres:liste')
@@ -72,20 +74,23 @@ class OffreDetailView(DetailView):
         return Offre.objects.select_related('expedition', 'transporteur', 'vehicule')
 
 
-class OffreCreateView(CreateView):
-    """Version corrigée (atelier Views 2, §VI) — ni statut ni transporteur exposés."""
+class OffresDeMonEntrepriseMixin:
+    """Appartenance : un transporteur ne charge que ses propres offres (pk d'une autre → 404)."""
+
+    def get_queryset(self):
+        return Offre.objects.filter(transporteur=self.request.user.entreprise).select_related('expedition')
+
+
+class OffreCreateView(TransporteurRequisMixin, CreateView):
+    """Atelier Authentification : plus de entreprise_id dans l'URL, le transporteur est
+    l'entreprise du compte connecté. get_form(), form_valid() et get_success_url() sont
+    inchangés par rapport à la partie Views 2."""
     model = Offre
-    form_class = OffreForm
+    form_class = OffreForm  # ['expedition', 'vehicule', 'prix', 'delai_jours']
     template_name = 'offres/form.html'
 
     def get_entreprise_courante(self):
-        # Pas d'authentification à ce stade : l'entreprise est passée via l'URL.
-        if not hasattr(self, '_entreprise'):
-            self._entreprise = get_object_or_404(
-                Entreprise, pk=self.kwargs['entreprise_id'],
-                type_entreprise=Entreprise.TYPE_TRANSPORTEUR,
-            )
-        return self._entreprise
+        return self.request.user.entreprise
 
     def get_initial(self):
         initial = super().get_initial()
@@ -126,17 +131,26 @@ class OffreCreateView(CreateView):
         return reverse('expeditions:detail', kwargs={'reference': self.object.expedition.reference})
 
 
-class OffreUpdateView(UpdateView):
+class OffreUpdateView(TransporteurRequisMixin, OffresDeMonEntrepriseMixin, UpdateView):
     model = Offre
     form_class = OffreUpdateForm
     template_name = 'offres/form.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        offre = self.get_object()
-        if offre.statut != Offre.PROPOSEE:
-            messages.error(request, 'Seule une offre au statut « proposée » peut être modifiée.')
-            return redirect('offres:detail', pk=offre.pk)
-        return super().dispatch(request, *args, **kwargs)
+    # Le contrôle de statut est fait dans get()/post() et non dans dispatch() : dispatch()
+    # de cette classe passerait AVANT celui du mixin (ordre MRO) et chargerait l'objet
+    # avant que l'accès n'ait été vérifié.
+    def _refuser_si_non_modifiable(self):
+        self.object = self.get_object()
+        if self.object.statut != Offre.PROPOSEE:
+            messages.error(self.request, 'Seule une offre au statut « proposée » peut être modifiée.')
+            return redirect('offres:detail', pk=self.object.pk)
+        return None
+
+    def get(self, request, *args, **kwargs):
+        return self._refuser_si_non_modifiable() or super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self._refuser_si_non_modifiable() or super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         try:
@@ -151,7 +165,7 @@ class OffreUpdateView(UpdateView):
         return reverse('offres:detail', kwargs={'pk': self.object.pk})
 
 
-class OffreDeleteView(DeleteView):
+class OffreDeleteView(TransporteurRequisMixin, OffresDeMonEntrepriseMixin, DeleteView):
     model = Offre
     template_name = 'offres/confirm_delete.html'
     context_object_name = 'offre'
@@ -165,10 +179,15 @@ class OffreDeleteView(DeleteView):
         return super().form_valid(form)
 
 
+@login_required
 @require_POST
 def accepter_offre(request, pk):
-    """Le chargeur accepte une offre : save() déclenche la cascade de la règle 5."""
-    offre = get_object_or_404(Offre.objects.select_related('expedition'), pk=pk)
+    """Le chargeur propriétaire de l'expédition accepte une offre : save() déclenche la cascade
+    de la règle 5. Une offre sur l'expédition d'un autre chargeur est introuvable (404)."""
+    offre = get_object_or_404(
+        Offre.objects.select_related('expedition'),
+        pk=pk, expedition__entreprise__utilisateur=request.user,
+    )
     if offre.statut != Offre.PROPOSEE or offre.expedition.statut != Expedition.PUBLIEE:
         messages.error(request, "Cette offre ne peut plus être acceptée.")
     else:
@@ -184,10 +203,11 @@ def accepter_offre(request, pk):
     return redirect('expeditions:detail', reference=offre.expedition.reference)
 
 
+@login_required
 @require_POST
 def retirer_offre(request, pk):
-    """Le transporteur retire son offre (proposee → retiree)."""
-    offre = get_object_or_404(Offre, pk=pk)
+    """Le transporteur retire SON offre (proposee → retiree)."""
+    offre = get_object_or_404(Offre, pk=pk, transporteur__utilisateur=request.user)
     if offre.statut == Offre.PROPOSEE:
         offre.statut = Offre.RETIREE
         offre.save()
@@ -195,17 +215,3 @@ def retirer_offre(request, pk):
     else:
         messages.error(request, 'Seule une offre « proposée » peut être retirée.')
     return redirect('offres:detail', pk=offre.pk)
-
-
-@require_GET
-def proposer_offre(request):
-    """Aiguillage depuis la page d'une expédition : choisit le transporteur puis redirige."""
-    entreprise = get_object_or_404(
-        Entreprise, pk=request.GET.get('entreprise_id') or 0,
-        type_entreprise=Entreprise.TYPE_TRANSPORTEUR,
-    )
-    url = reverse('offres:ajouter', kwargs={'entreprise_id': entreprise.pk})
-    expedition = request.GET.get('expedition')
-    if expedition and expedition.isdigit():
-        url += f'?expedition={expedition}'
-    return redirect(url)

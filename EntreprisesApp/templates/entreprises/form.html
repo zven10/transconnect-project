@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="card">
+  {% if not object %}<p class="muted">Étape 2 sur 2 : l'entreprise sera rattachée à votre compte <strong>{{ user.username }}</strong>.</p>{% endif %}
   <h1>{% if object %}Modifier {{ object.raison_sociale }}{% else %}Nouvelle entreprise{% endif %}</h1>
   {% url 'entreprises:liste' as annuler %}
   {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}

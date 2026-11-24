@@ -14,10 +14,12 @@
     <dt>Transporteur</dt><dd><a href="{% url 'entreprises:detail' vehicule.entreprise.pk %}">{{ vehicule.entreprise.raison_sociale }}</a></dd>
     <dt>Ajouté le</dt><dd>{{ vehicule.created_at|date:"d/m/Y" }}</dd>
   </dl>
+  {% if user.is_authenticated and mon_entreprise.pk == vehicule.entreprise_id %}
   <div class="actions">
     <a class="btn secondaire" href="{% url 'vehicules:modifier' vehicule.pk %}">Modifier</a>
     <a class="btn danger" href="{% url 'vehicules:supprimer' vehicule.pk %}">Supprimer</a>
   </div>
+  {% endif %}
 </div>
 
 <div class="card">

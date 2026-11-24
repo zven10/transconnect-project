@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="card">
+  <p class="muted">Transporteur : <strong>{{ mon_entreprise.raison_sociale }}</strong> (fixé depuis votre compte).</p>
   <h1>{% if object %}Modifier le véhicule {{ object.immatriculation }}{% else %}Ajouter un véhicule{% endif %}</h1>
   {% url 'vehicules:liste' as annuler %}
   {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}

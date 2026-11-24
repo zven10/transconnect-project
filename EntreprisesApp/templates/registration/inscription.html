@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Créer un compte{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:620px;">
+  <h1>Créer un compte</h1>
+  <p class="muted">Étape 1 sur 2 : votre compte. Vous enregistrerez ensuite votre entreprise (chargeur ou transporteur).</p>
+  {% url 'login' as annuler %}
+  {% include 'partials/form.html' with bouton='Créer mon compte' annuler=annuler %}
+  <p>Déjà inscrit ? <a href="{% url 'login' %}">Se connecter</a></p>
+</div>
+{% endblock %}

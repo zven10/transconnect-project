@@ -21,5 +21,4 @@ class AccueilView(TemplateView):
             Expedition.objects.filter(statut=Expedition.PUBLIEE)
             .select_related('entreprise')[:5]
         )
-        context['chargeurs'] = Entreprise.objects.filter(type_entreprise=Entreprise.TYPE_CHARGEUR)
         return context

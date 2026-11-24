@@ -1,11 +1,12 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
-from EntreprisesApp.models import Entreprise
+from EntreprisesApp.mixins import ChargeurRequisMixin
 
 from .forms import ExpeditionForm
 from .models import Expedition
@@ -35,9 +36,13 @@ def detail_expedition(request, reference):
     return render(request, 'expeditions/detail.html', {'expedition': expedition, 'offres': offres})
 
 
+@login_required
 @require_http_methods(['GET', 'POST'])
 def supprimer_expedition(request, reference):
-    expedition = get_object_or_404(Expedition, reference=reference)
+    # Authentification (@login_required) + appartenance (filtre sur l'entreprise du compte)
+    expedition = get_object_or_404(
+        Expedition, reference=reference, entreprise__utilisateur=request.user
+    )
     if request.method == 'POST':
         expedition.delete()
         return redirect('expeditions:liste')
@@ -85,35 +90,31 @@ class ExpeditionDetailView(DetailView):
             .select_related('transporteur', 'vehicule')
             .order_by('-date_proposition', '-created_at')
         )
-        context['transporteurs'] = Entreprise.objects.filter(
-            type_entreprise=Entreprise.TYPE_TRANSPORTEUR
-        )
         return context
 
 
-class ExpeditionCreateView(CreateView):
-    """L'entreprise chargeur est fixée côté serveur (paramètre d'URL), jamais par le formulaire."""
-    model = Expedition
-    form_class = ExpeditionForm
-    template_name = 'expeditions/form.html'
+class ExpeditionsDeMonEntrepriseMixin:
+    """Appartenance : un chargeur ne charge que ses propres expéditions (référence d'un autre → 404)."""
 
-    def get_entreprise_courante(self):
-        return get_object_or_404(
-            Entreprise, pk=self.kwargs['entreprise_id'], type_entreprise=Entreprise.TYPE_CHARGEUR
-        )
+    def get_queryset(self):
+        return Expedition.objects.filter(entreprise=self.request.user.entreprise)
+
+
+class ExpeditionCreateView(ChargeurRequisMixin, CreateView):
+    """Plus de paramètre d'URL : l'entreprise chargeur est celle du compte connecté."""
+    model = Expedition
+    form_class = ExpeditionForm  # entreprise, reference et statut : jamais fournis par le client
+    template_name = 'expeditions/form.html'
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        # Fixé avant is_valid() : les règles de clean() s'exécutent dans le cycle du formulaire
-        form.instance.entreprise = self.get_entreprise_courante()
+        # Fixé avant is_valid() : la règle « entreprise chargeur » de clean() est vérifiée
+        # pendant la validation du formulaire (clean() teste entreprise_id avant d'y accéder).
+        form.instance.entreprise = self.request.user.entreprise
         return form
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['entreprise'] = self.get_entreprise_courante()
-        return context
-
     def form_valid(self, form):
+        form.instance.entreprise = self.request.user.entreprise
         messages.success(self.request, 'Expédition publiée.')
         return super().form_valid(form)
 
@@ -121,7 +122,7 @@ class ExpeditionCreateView(CreateView):
         return reverse('expeditions:detail', kwargs={'reference': self.object.reference})
 
 
-class ExpeditionUpdateView(UpdateView):
+class ExpeditionUpdateView(ChargeurRequisMixin, ExpeditionsDeMonEntrepriseMixin, UpdateView):
     model = Expedition
     form_class = ExpeditionForm
     template_name = 'expeditions/form.html'
@@ -136,7 +137,7 @@ class ExpeditionUpdateView(UpdateView):
         return reverse('expeditions:detail', kwargs={'reference': self.object.reference})
 
 
-class ExpeditionDeleteView(DeleteView):
+class ExpeditionDeleteView(ChargeurRequisMixin, ExpeditionsDeMonEntrepriseMixin, DeleteView):
     model = Expedition
     template_name = 'expeditions/confirm_delete.html'
     slug_field = 'reference'

@@ -16,17 +16,21 @@ from .models import Offre
 class OffreBaseTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
+        def compte(username):
+            return Utilisateur.objects.create_user(username, f'{username}@gmail.com', 'x12345678')
+
+        cls.user_chargeur, cls.user_t1, cls.user_t2 = compte('chargeur'), compte('t1'), compte('t2')
         cls.chargeur = Entreprise.objects.create(
             raison_sociale='Chargeur', matricule_fiscal='5555555AAM000', type_entreprise='chargeur',
-            adresse='Avenue de Carthage 20, 1000 Tunis',
+            adresse='Avenue de Carthage 20, 1000 Tunis', utilisateur=cls.user_chargeur,
         )
         cls.t1 = Entreprise.objects.create(
             raison_sociale='T1', matricule_fiscal='6666666AAM000', type_entreprise='transporteur',
-            adresse='Zone industrielle Charguia, 2035 Tunis',
+            adresse='Zone industrielle Charguia, 2035 Tunis', utilisateur=cls.user_t1,
         )
         cls.t2 = Entreprise.objects.create(
             raison_sociale='T2', matricule_fiscal='7777777AAM000', type_entreprise='transporteur',
-            adresse='Route de Gabès km 4, 3000 Sfax',
+            adresse='Route de Gabès km 4, 3000 Sfax', utilisateur=cls.user_t2,
         )
 
     def setUp(self):
@@ -112,8 +116,12 @@ class ReglesMetierTests(OffreBaseTestCase):
 
 
 class OffreVuesTests(OffreBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.user_t1)
+
     def test_creation_mass_assignment_corrige(self):
-        url = reverse('offres:ajouter', args=[self.t1.pk])
+        url = reverse('offres:ajouter')
         r = self.client.post(url, {
             'expedition': self.exp.pk, 'vehicule': self.v1.pk, 'prix': '700', 'delai_jours': 3,
             'statut': 'acceptee', 'transporteur': self.t2.pk,  # tentatives d'injection
@@ -127,7 +135,7 @@ class OffreVuesTests(OffreBaseTestCase):
 
     def test_creation_doublon_affiche_erreur_pas_500(self):
         self.offre()
-        url = reverse('offres:ajouter', args=[self.t1.pk])
+        url = reverse('offres:ajouter')
         r = self.client.post(url, {'expedition': self.exp.pk, 'vehicule': self.v1.pk,
                                    'prix': '650', 'delai_jours': 2})
         self.assertEqual(r.status_code, 200)
@@ -135,15 +143,45 @@ class OffreVuesTests(OffreBaseTestCase):
         self.assertEqual(Offre.objects.count(), 1)
 
     def test_vehicule_d_un_autre_transporteur_refuse(self):
-        url = reverse('offres:ajouter', args=[self.t1.pk])
+        url = reverse('offres:ajouter')
         r = self.client.post(url, {'expedition': self.exp.pk, 'vehicule': self.v2.pk,
                                    'prix': '650', 'delai_jours': 2})
         self.assertEqual(r.status_code, 200)
         self.assertFalse(Offre.objects.exists())
 
+    def test_creation_reservee_aux_transporteurs(self):
+        url = reverse('offres:ajouter')
+        self.client.force_login(self.user_chargeur)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.logout()
+        self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")
+
+    def test_accepter_reserve_au_chargeur_proprietaire(self):
+        o1 = self.offre()
+        # Un transporteur (même connecté) ne peut pas accepter : l'offre est introuvable pour lui
+        self.assertEqual(self.client.post(reverse('offres:accepter', args=[o1.pk])).status_code, 404)
+        o1.refresh_from_db()
+        self.assertEqual(o1.statut, Offre.PROPOSEE)
+
+    def test_offre_d_un_autre_transporteur_404(self):
+        o2 = self.offre(transporteur=self.t2, vehicule=self.v2)
+        for nom in ('offres:modifier', 'offres:supprimer'):
+            self.assertEqual(self.client.get(reverse(nom, args=[o2.pk])).status_code, 404, nom)
+        self.assertEqual(self.client.post(reverse('offres:retirer', args=[o2.pk])).status_code, 404)
+        o2.refresh_from_db()
+        self.assertEqual(o2.statut, Offre.PROPOSEE)
+
+    def test_modifier_son_offre(self):
+        o1 = self.offre()
+        r = self.client.post(reverse('offres:modifier', args=[o1.pk]), {'prix': '480', 'delai_jours': 1})
+        self.assertRedirects(r, reverse('offres:detail', args=[o1.pk]))
+        o1.refresh_from_db()
+        self.assertEqual(o1.prix, Decimal('480'))
+
     def test_accepter_post_uniquement_et_cascade(self):
         o1 = self.offre()
         o2 = self.offre(transporteur=self.t2, vehicule=self.v2)
+        self.client.force_login(self.user_chargeur)
         self.assertEqual(self.client.get(reverse('offres:accepter', args=[o1.pk])).status_code, 405)
         self.client.post(reverse('offres:accepter', args=[o1.pk]))
         o2.refresh_from_db()
@@ -156,7 +194,7 @@ class OffreVuesTests(OffreBaseTestCase):
         for url in [reverse('accueil'), reverse('offres:liste'), reverse('offres:detail', args=[o.pk]),
                     reverse('entreprises:liste'), reverse('entreprises:detail', args=[self.t1.pk]),
                     reverse('entreprises:detail', args=[self.chargeur.pk]),
-                    reverse('vehicules:liste'), reverse('offres:ajouter', args=[self.t1.pk])]:
+                    reverse('vehicules:liste'), reverse('vehicules:mes'), reverse('offres:ajouter')]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
 
 

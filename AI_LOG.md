@@ -50,3 +50,14 @@ Traçabilité de l'usage de l'IA (workshop PFW 2026-2027). Les commits concerné
   3. `OffreUpdateForm` : seuls `prix` et `delai_jours` sont modifiables, et uniquement tant que l'offre est `proposee`.
   4. `VehiculeForm` : `entreprise` limité aux transporteurs et désactivé en modification (pas de transfert d'un véhicule vers un autre propriétaire).
 - **Ce que cela apprend sur l'outil** : l'assistant optimise pour « ça marche visuellement » ; les champs sensibles (statut, clé d'appartenance, dates auto) doivent être listés explicitement et fixés côté serveur — c'est au développeur de relire.
+
+## Entrée 5 — 24/11/2026 — Authentification (connexion, inscription, protection des vues)
+
+- **Outil IA utilisé** : Claude (Claude Code)
+- **Prompt** : « Réalise la partie Authentification du workshop à partir du PDF. »
+- **Écarts relevés et corrigés pendant la revue** :
+  1. **Ordre MRO et `dispatch()`** : `OffreUpdateView` surchargeait `dispatch()` pour refuser une offre non « proposée ». Une fois `TransporteurRequisMixin` ajouté, ce `dispatch()` de la classe s'exécutait **avant** celui du mixin (Python lit la classe elle-même avant ses parents) : l'objet était chargé avant le contrôle d'accès, et `request.user.entreprise` levait une exception pour un anonyme. Le contrôle de statut est déplacé dans `get()` / `post()`.
+  2. **Templates de changement de mot de passe** : `django.contrib.admin` fournit déjà `registration/password_change_form.html` ; `EntreprisesApp` est placée avant l'admin dans `INSTALLED_APPS` pour que nos templates soient trouvés en premier (test `test_changement_mot_de_passe_template_du_projet`).
+  3. **`accepter_offre`** : le sujet ne demande que la connexion, mais un transporteur connecté pouvait alors accepter une offre sur l'expédition d'un chargeur. L'offre est désormais cherchée avec `expedition__entreprise__utilisateur=request.user` (404 sinon). Même principe pour `retirer_offre` et les FBV de suppression conservées en référence.
+  4. **Code mort** : la vue d'aiguillage `proposer_offre` (choix du transporteur dans une liste, partie Views 2) n'a plus de raison d'être et est supprimée avec sa route ; le lien « Proposer une offre » pointe vers `offres:ajouter?expedition=<pk>`.
+- **Vérifications** : 61 tests (dont `VehiculeTests.test_section_VII_vehicule_d_un_autre_transporteur`, `ExpeditionTests.test_suppression_anonyme_redirige_avec_next`, `InscriptionTests.test_champs_sensibles_ignores`) ; manipulation de la section VII rejouée dans le navigateur (`transsahel.demo` : 200 sur ses véhicules, 404 sur celui de `capbon.demo`).

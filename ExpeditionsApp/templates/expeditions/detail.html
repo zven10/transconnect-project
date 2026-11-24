@@ -14,10 +14,13 @@
     <dt>Description</dt><dd>{{ expedition.description|default:"—"|linebreaksbr }}</dd>
     <dt>Publiée le</dt><dd>{{ expedition.created_at|date:"d/m/Y H:i" }}</dd>
   </dl>
+  {# Affichage seulement : la protection réelle est dans les vues (mixins + get_queryset) #}
+  {% if user.is_authenticated and mon_entreprise.pk == expedition.entreprise_id %}
   <div class="actions">
     <a class="btn secondaire" href="{% url 'expeditions:modifier' expedition.reference %}">Modifier</a>
     <a class="btn danger" href="{% url 'expeditions:supprimer' expedition.reference %}">Supprimer</a>
   </div>
+  {% endif %}
 </div>
 
 <div class="card">
@@ -35,7 +38,7 @@
         <td>{{ offre.delai_jours }} jour{{ offre.delai_jours|pluralize }}</td>
         <td><span class="badge b-{{ offre.statut }}">{{ offre.get_statut_display }}</span></td>
         <td>
-          {% if expedition.statut == 'publiee' and offre.statut == 'proposee' %}
+          {% if expedition.statut == 'publiee' and offre.statut == 'proposee' and mon_entreprise.pk == expedition.entreprise_id %}
           <form class="inline" method="post" action="{% url 'offres:accepter' offre.pk %}">
             {% csrf_token %}
             <button class="btn petit" type="submit">Accepter</button>
@@ -54,16 +57,14 @@
 {% if expedition.statut == 'publiee' %}
 <div class="card">
   <h2>Proposer une offre</h2>
-  {% if transporteurs %}
-  <form method="get" action="{% url 'offres:proposer' %}" class="actions">
-    <input type="hidden" name="expedition" value="{{ expedition.pk }}">
-    <select name="entreprise_id" aria-label="Transporteur">
-      {% for t in transporteurs %}<option value="{{ t.pk }}">{{ t.raison_sociale }}</option>{% endfor %}
-    </select>
-    <button class="btn" type="submit">Continuer</button>
-  </form>
+  {% if not user.is_authenticated %}
+  <p class="muted">Vous êtes transporteur ?
+    <a href="{% url 'login' %}?next={% url 'offres:ajouter' %}%3Fexpedition%3D{{ expedition.pk }}">Connectez-vous</a>
+    pour proposer une offre sur cette expédition.</p>
+  {% elif mon_entreprise.est_transporteur %}
+  <p><a class="btn" href="{% url 'offres:ajouter' %}?expedition={{ expedition.pk }}">Proposer une offre pour {{ mon_entreprise.raison_sociale }}</a></p>
   {% else %}
-  <p class="muted">Aucune entreprise transporteur enregistrée.</p>
+  <p class="muted">Seules les entreprises de type transporteur peuvent proposer une offre.</p>
   {% endif %}
 </div>
 {% endif %}

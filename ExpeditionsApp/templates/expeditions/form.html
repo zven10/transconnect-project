@@ -9,7 +9,7 @@
   {% include 'partials/form.html' with bouton='Enregistrer' annuler=annuler %}
   {% else %}
   <h1>Publier une expédition</h1>
-  <p class="muted">Pour le compte de <strong>{{ entreprise.raison_sociale }}</strong> (chargeur).</p>
+  <p class="muted">Pour le compte de <strong>{{ mon_entreprise.raison_sociale }}</strong> (chargeur).</p>
   {% url 'expeditions:liste' as annuler %}
   {% include 'partials/form.html' with bouton='Publier' annuler=annuler %}
   {% endif %}

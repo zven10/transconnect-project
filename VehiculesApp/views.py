@@ -1,10 +1,13 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
+
+from EntreprisesApp.mixins import TransporteurRequisMixin
 
 from .forms import VehiculeForm
 from .models import Vehicule
@@ -25,9 +28,10 @@ def detail_vehicule(request, pk):
     return render(request, 'vehicules/detail.html', {'vehicule': vehicule, 'offres': offres})
 
 
+@login_required
 @require_http_methods(['GET', 'POST'])
 def supprimer_vehicule(request, pk):
-    vehicule = get_object_or_404(Vehicule, pk=pk)
+    vehicule = get_object_or_404(Vehicule, pk=pk, entreprise__utilisateur=request.user)
     if request.method == 'POST':
         vehicule.delete()
         return redirect('vehicules:liste')
@@ -62,24 +66,47 @@ class VehiculeDetailView(DetailView):
         return context
 
 
-class VehiculeCreateView(CreateView):
+class VehiculesDeMonEntrepriseMixin:
+    """Appartenance (section VII) : le queryset de départ ne contient que les véhicules
+    de l'entreprise connectée. Le pk d'un véhicule d'un autre transporteur devient
+    introuvable → 404 (on ne confirme même pas qu'il existe)."""
+
+    def get_queryset(self):
+        return Vehicule.objects.filter(entreprise=self.request.user.entreprise)
+
+
+class MesVehiculesListView(TransporteurRequisMixin, VehiculesDeMonEntrepriseMixin, ListView):
+    """« Mes véhicules » : même mixin d'appartenance, réutilisé pour une liste."""
+    model = Vehicule
+    template_name = 'vehicules/liste.html'
+    context_object_name = 'vehicules'
+    paginate_by = 15
+    extra_context = {'mes_vehicules': True}
+
+    def get_queryset(self):
+        return super().get_queryset().order_by('immatriculation')
+
+
+class VehiculeCreateView(TransporteurRequisMixin, CreateView):
     model = Vehicule
     form_class = VehiculeForm
     template_name = 'vehicules/form.html'
-    success_url = reverse_lazy('vehicules:liste')
+    success_url = reverse_lazy('vehicules:mes')
 
-    def get_initial(self):
-        initial = super().get_initial()
-        if self.request.GET.get('entreprise'):
-            initial['entreprise'] = self.request.GET['entreprise']
-        return initial
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # entreprise : jamais fournie par le client, fixée avant is_valid() pour que
+        # clean() (transporteur obligatoire, gabarit) s'exécute dans le cycle du formulaire
+        form.instance.entreprise = self.request.user.entreprise
+        return form
 
     def form_valid(self, form):
+        form.instance.entreprise = self.request.user.entreprise
         messages.success(self.request, 'Véhicule ajouté.')
         return super().form_valid(form)
 
 
-class VehiculeUpdateView(UpdateView):
+class VehiculeUpdateView(TransporteurRequisMixin, VehiculesDeMonEntrepriseMixin, UpdateView):
     model = Vehicule
     form_class = VehiculeForm
     template_name = 'vehicules/form.html'
@@ -92,11 +119,11 @@ class VehiculeUpdateView(UpdateView):
         return reverse('vehicules:detail', kwargs={'pk': self.object.pk})
 
 
-class VehiculeDeleteView(DeleteView):
+class VehiculeDeleteView(TransporteurRequisMixin, VehiculesDeMonEntrepriseMixin, DeleteView):
     model = Vehicule
     template_name = 'vehicules/confirm_delete.html'
     context_object_name = 'vehicule'
-    success_url = reverse_lazy('vehicules:liste')
+    success_url = reverse_lazy('vehicules:mes')
 
     def form_valid(self, form):
         try:

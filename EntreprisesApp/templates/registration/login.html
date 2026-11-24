@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Connexion{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:520px;">
+  <h1>Connexion</h1>
+  {% if next and user.is_authenticated %}
+  <ul class="messages"><li class="warning">Votre compte n'a pas accès à cette page. Connectez-vous avec un autre compte.</li></ul>
+  {% elif next %}
+  <ul class="messages"><li class="info">Connectez-vous pour accéder à cette page.</li></ul>
+  {% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <ul class="errorlist messages"><li class="error">{{ form.non_field_errors|join:" " }}</li></ul>
+    {% endif %}
+    {{ form.as_p }}
+    {# Retour automatique sur la page protégée après connexion #}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="actions"><button type="submit" class="btn">Se connecter</button></div>
+  </form>
+  <p>Pas encore de compte ? <a href="{% url 'inscription' %}">Créer un compte</a></p>
+</div>
+{% endblock %}

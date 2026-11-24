@@ -13,7 +13,9 @@
     nav .logo { font-weight:700; font-size:1.15rem; color:#fff; text-decoration:none; margin-right:12px; }
     nav a { color:#f3dfe2; text-decoration:none; padding:4px 0; border-bottom:2px solid transparent; }
     nav a:hover, nav a.actif { color:#fff; border-bottom-color:#fff; }
-    nav .admin { margin-left:auto; }
+    nav .compte { margin-left:auto; display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; color:#f3dfe2; }
+    nav button.lien { background:none; border:1px solid #f3dfe2; border-radius:6px; color:#fff; padding:3px 10px; cursor:pointer; font:inherit; font-size:.9rem; }
+    nav button.lien:hover { background:#fff; color:var(--brand-dark); }
     main { max-width:1100px; margin:24px auto; padding:0 16px; }
     h1, h2 { margin-top:0; }
     .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:20px; }
@@ -60,7 +62,30 @@
       <a href="{% url 'offres:liste' %}" {% if nom_url == 'offres' %}class="actif"{% endif %}>Offres</a>
       <a href="{% url 'vehicules:liste' %}" {% if nom_url == 'vehicules' %}class="actif"{% endif %}>Véhicules</a>
       <a href="{% url 'entreprises:liste' %}" {% if nom_url == 'entreprises' %}class="actif"{% endif %}>Entreprises</a>
-      <a class="admin" href="{% url 'admin:index' %}">Admin</a>
+      {% if user.is_authenticated %}
+        {% if mon_entreprise.est_transporteur %}
+        <a href="{% url 'vehicules:mes' %}">Mes véhicules</a>
+        {% elif mon_entreprise.est_chargeur %}
+        <a href="{% url 'expeditions:ajouter' %}">Publier une expédition</a>
+        {% else %}
+        <a href="{% url 'entreprises:ajouter' %}">Créer mon entreprise</a>
+        {% endif %}
+      <span class="compte">
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+        <span>Connecté : <strong>{{ user.username }}</strong></span>
+        <a href="{% url 'password_change' %}">Mot de passe</a>
+        {# Déconnexion en POST (Django ≥ 5 refuse le GET sur LogoutView) #}
+        <form method="post" action="{% url 'logout' %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="lien">Se déconnecter</button>
+        </form>
+      </span>
+      {% else %}
+      <span class="compte">
+        <a href="{% url 'login' %}">Se connecter</a>
+        <a href="{% url 'inscription' %}">Créer un compte</a>
+      </span>
+      {% endif %}
     </nav>
     {% endwith %}
   </header>

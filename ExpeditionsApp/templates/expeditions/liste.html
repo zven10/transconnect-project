@@ -2,7 +2,10 @@
 {% block title %}Expéditions disponibles{% endblock %}
 
 {% block content %}
-<h1>Expéditions ({% if page_obj %}{{ page_obj.paginator.count }}{% else %}{{ expeditions|length }}{% endif %})</h1>
+<div class="actions">
+  <h1 style="margin:0;">Expéditions ({% if page_obj %}{{ page_obj.paginator.count }}{% else %}{{ expeditions|length }}{% endif %})</h1>
+  {% if mon_entreprise.est_chargeur %}<a class="btn" href="{% url 'expeditions:ajouter' %}">+ Publier une expédition</a>{% endif %}
+</div>
 
 <p class="filtres">
   Statut :
@@ -24,6 +27,14 @@
       <br>
       <small>{{ expedition.description|default:"Aucune description fournie."|truncatewords:15 }}</small>
       <small class="muted">— {{ expedition.entreprise.raison_sociale|upper }}</small>
+      {% if user.is_authenticated %}
+        {% if mon_entreprise.pk == expedition.entreprise_id %}
+        <a class="btn petit secondaire" href="{% url 'expeditions:modifier' expedition.reference %}">Modifier</a>
+        <a class="btn petit danger" href="{% url 'expeditions:supprimer' expedition.reference %}">Supprimer</a>
+        {% elif mon_entreprise.est_transporteur and expedition.statut == 'publiee' %}
+        <a class="btn petit" href="{% url 'offres:ajouter' %}?expedition={{ expedition.pk }}">Proposer une offre</a>
+        {% endif %}
+      {% endif %}
     </li>
     {% empty %}
     <li>Aucune expédition disponible pour le moment.</li>

@@ -21,9 +21,10 @@ uv run python manage.py runserver
 
 - Site public : http://127.0.0.1:8000/
 - Admin : http://127.0.0.1:8000/admin/ — tableau de bord d'intégrité : http://127.0.0.1:8000/admin/health-check/
-- Tests : `uv run python manage.py test` (35 tests : règles métier, vues, action admin, health-check)
+- Tests : `uv run python manage.py test` (61 tests : règles métier, vues, action admin, health-check, authentification)
+- Comptes : http://127.0.0.1:8000/comptes/login/ · http://127.0.0.1:8000/comptes/inscription/
 
-Base de données : `ghassen.sqlite3` (nom de l'étudiant). Les comptes créés par `seed_demo` ont le mot de passe `demo12345`.
+Base de données : `ghassen.sqlite3` (nom de l'étudiant). Les comptes créés par `seed_demo` ont le mot de passe `demo12345` : `sotupa.demo` (chargeur), `transsahel.demo` et `capbon.demo` (transporteurs).
 
 ## Partie Models
 
@@ -81,3 +82,40 @@ Résultat sur les données du seed : aucune anomalie (toutes les écritures pass
 | Création / modification | demanderait de réécrire le cycle `is_valid` + PRG à la main | `CreateView` / `UpdateView` + `success_url` gèrent le PRG nativement |
 
 La chasse au mass assignment est documentée dans `AI_LOG.md` (entrée 4).
+
+## Partie Authentification
+
+| Élément | Où |
+|---|---|
+| `LOGIN_URL = 'login'`, `LOGIN_REDIRECT_URL` / `LOGOUT_REDIRECT_URL = 'expeditions:liste'` | `DjangoProject2/settings.py` |
+| `comptes/` → `django.contrib.auth.urls` (login, logout, password_change…) ; `comptes/inscription/` | `DjangoProject2/urls.py` |
+| Templates `registration/login.html` (champ caché `next`), `inscription.html`, `password_change_form.html`, `password_change_done.html` | `EntreprisesApp/templates/registration/` (`EntreprisesApp` placée avant l'admin dans `INSTALLED_APPS`) |
+| Déconnexion par formulaire POST + `{% csrf_token %}` ; barre de navigation selon `user.is_authenticated` et le type d'entreprise (« Mes véhicules » / « Publier une expédition ») | `templates/base.html` |
+| `InscriptionForm(UserCreationForm)` : `username`, `email`, `telephone` (jamais `role`, `is_staff`, `is_superuser`) ; `InscriptionView` + `login()` → création de l'entreprise | `EntreprisesApp/forms.py`, `EntreprisesApp/views.py` |
+| `TransporteurRequisMixin`, `ChargeurRequisMixin` (`LoginRequiredMixin` + `UserPassesTestMixin`) | `EntreprisesApp/mixins.py` |
+| `mon_entreprise` disponible dans tous les templates | `EntreprisesApp/context_processors.py` |
+
+Parcours : inscription → création de l'entreprise (rattachée à `request.user`) → ajout d'un véhicule → dépôt d'une offre → déconnexion (testé de bout en bout : `EntreprisesApp.tests.ParcoursCompletTests`).
+
+Contrôle d'accès par vue :
+
+| Vue | Anonyme | Connecté, mauvais type | Connecté, objet d'une autre entreprise |
+|---|---|---|---|
+| `ExpeditionCreateView` (`expeditions/ajouter/`, sans paramètre) | → connexion | 403 | — (entreprise fixée depuis `request.user`) |
+| `ExpeditionUpdateView` / `DeleteView`, FBV `supprimer_expedition` | → connexion | 403 | 404 |
+| `OffreCreateView` (`offres/ajouter/`, sans `entreprise_id`) | → connexion | 403 | — (transporteur fixé depuis `request.user`) |
+| `OffreUpdateView` / `DeleteView`, `retirer_offre` | → connexion | 403 | 404 |
+| `accepter_offre` (POST) | → connexion | — | 404 (seul le chargeur de l'expédition) |
+| `VehiculeCreateView` (sans champ `entreprise`) | → connexion | 403 | — |
+| `VehiculeUpdateView` / `DeleteView` (`VehiculesDeMonEntrepriseMixin`) | → connexion | 403 | 404 |
+| `EntrepriseCreateView` / `UpdateView` / `DeleteView` | → connexion | — | 404 |
+
+Les pages de lecture (listes et détails) restent publiques ; les boutons Modifier / Supprimer / Accepter / Proposer ne s'affichent qu'au propriétaire ou au bon type d'entreprise, mais c'est la vue qui protège (un bouton masqué n'empêche pas de taper l'URL).
+
+### Rapport — authentification vs autorisation
+
+**L'authentification** répond à « qui es-tu ? » : Django vérifie le mot de passe (`LoginView`), puis `login()` enregistre l'identifiant dans la session, et chaque requête suivante retrouve `request.user`. `LoginRequiredMixin` / `@login_required` ne vérifient que cela : il y a un utilisateur connecté.
+
+**L'autorisation** répond à « as-tu le droit de faire *ceci* sur *cet objet* ? ». Lors de la manipulation de la section VII, le transporteur A, correctement connecté, a pu ouvrir `/vehicules/2/modifier/` et modifier puis supprimer le véhicule du transporteur B : `UpdateView` chargeait l'objet avec `Vehicule.objects.all()` puis `pk=2`, sans regarder à qui il appartenait. Être connecté ne donnait donc aucune garantie sur les données touchées.
+
+La correction se fait à deux niveaux : par **rôle** (`UserPassesTestMixin.test_func()` → 403 si l'entreprise n'est pas du bon type) et par **appartenance** (`get_queryset()` filtré sur `request.user.entreprise` → 404, pour ne même pas confirmer que l'objet existe). Comme pour le mass assignment, tout ce qui touche à l'appartenance est décidé côté serveur à partir de `request.user`, jamais à partir d'une valeur envoyée par le client (champ de formulaire, paramètre `entreprise_id` ou `pk` dans l'URL).
