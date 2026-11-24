@@ -40,11 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Applications métier TransConnect (EntreprisesApp est déclarée en tête)
     'ExpeditionsApp',
     'OffresApp',
     'VehiculesApp',
+    'rest_framework',
+    'django_filters',
+
 ]
 
 # Modèle utilisateur personnalisé (hérite d'AbstractUser)
